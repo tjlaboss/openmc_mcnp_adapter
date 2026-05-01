@@ -301,15 +301,17 @@ def get_openmc_surfaces(surfaces, data):
             a, b, c, d, e, f, g, h, j, k = coeffs
             surf = openmc.Quadric(surface_id=s['id'], a=a, b=b, c=c, d=d, e=e,
                                   f=f, g=g, h=h, j=j, k=k)
-        elif s['mnemonic'] == 'tx':
+        elif s['mnemonic'] in ('tx', 'ty', 'tz'):
             x0, y0, z0, a, b, c = coeffs
-            surf = openmc.XTorus(surface_id=s['id'], x0=x0, y0=y0, z0=z0, a=a, b=b, c=c)
-        elif s['mnemonic'] == 'ty':
-            x0, y0, z0, a, b, c = coeffs
-            surf = openmc.YTorus(surface_id=s['id'], x0=x0, y0=y0, z0=z0, a=a, b=b, c=c)
-        elif s['mnemonic'] == 'tz':
-            x0, y0, z0, a, b, c = coeffs
-            surf = openmc.ZTorus(surface_id=s['id'], x0=x0, y0=y0, z0=z0, a=a, b=b, c=c)
+            if isclose(a, 0.0, abs_tol=1e-12) and isclose(b, c):
+                warnings.warn(
+                    f"Degenerate torus surface {s['id']} (A=0, B=C) converted "
+                    f"to an openmc.Sphere of radius {b}."
+                )
+                surf = openmc.Sphere(surface_id=s['id'], x0=x0, y0=y0, z0=z0, r=b)
+            else:
+                cls = getattr(openmc, f"{s['mnemonic'][1].upper()}Torus")
+                surf = cls(surface_id=s['id'], x0=x0, y0=y0, z0=z0, a=a, b=b, c=c)
         elif s['mnemonic'] in ('x', 'y', 'z'):
             axis = s['mnemonic'].upper()
             cls_plane = getattr(openmc, f'{axis}Plane')
